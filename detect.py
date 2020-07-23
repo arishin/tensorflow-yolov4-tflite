@@ -1,7 +1,15 @@
 import tensorflow as tf
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
-if len(physical_devices) > 0:
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+if (physical_devices):
+    try:
+        for gpu in physical_devices:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+        print (len(physical_devices), "Physical GPUs", len(logical_gpus), "Logical GPUs")
+    except RuntimeError as e:
+    # Memory growth must be set before GPUs have been initialized
+        print(e)
+
 from absl import app, flags, logging
 from absl.flags import FLAGS
 import core.utils as utils
@@ -13,6 +21,11 @@ import numpy as np
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
+
+for i in ('framework', 'weights', 'size', 'tiny', 'model', 'images', 'output', 'iou', 'score'):
+    if (getattr(FLAGS, i, None) is not None):
+        delattr(FLAGS, i)
+    
 flags.DEFINE_string('framework', 'tf', '(tf, tflite, trt')
 flags.DEFINE_string('weights', './checkpoints/yolov4-416',
                     'path to weights file')
@@ -88,6 +101,7 @@ def main(_argv):
         image.show()
         image = cv2.cvtColor(np.array(image), cv2.COLOR_BGR2RGB)
         cv2.imwrite(FLAGS.output + 'detection' + str(count) + '.png', image)
+        InteractiveSession.close(session)
 
 if __name__ == '__main__':
     try:
